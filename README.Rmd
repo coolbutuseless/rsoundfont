@@ -21,10 +21,10 @@ library(rsoundfont)
 ![](https://img.shields.io/badge/cool-useless-green.svg)
 <!-- badges: end -->
 
-`{rsoundfont}` is a package for parsing [soundfont](https://en.wikipedia.org/wiki/SoundFont) files which contain audio data representing musical instruments.
+`{rsoundfont}` is a package for parsing [soundfont](https://en.wikipedia.org/wiki/SoundFont) files which contain audio data representing multiple musical instruments.
 
 Soundfont files are a common way of distributing a set of music instruments as audio samples, and 
-is often used for [MIDI](https://en.wikipedia.org/wiki/MIDI) playback support on various computers and mobile devices.
+are often used for [MIDI](https://en.wikipedia.org/wiki/MIDI) playback support on various computers and mobile devices.
 
 In addition to a structured way for storing multi-instrument data in a single file,
 the Soundfont format also includes looping information for each sample which allows
@@ -39,7 +39,7 @@ the actual sample is of a much shorter period.
   Sample will be looped to the given duration. 
     * This will return an `audioSample` object compatible with the
     [`{audio}`](https://cran.r-project.org/package=audio) package.
-    * Play the sample with `audio::play()`
+    * Once created, you can play the sample with `audio::play()`
 
 ## SoundFont Technical Specification
 
