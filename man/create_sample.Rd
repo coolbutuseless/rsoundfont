@@ -4,7 +4,7 @@
 \alias{create_sample}
 \title{Create an \code{audioSample} sample for an instrument from a SoundFont}
 \usage{
-create_sample(sf, inst, dur)
+create_sample(sf, inst, dur = NULL)
 }
 \arguments{
 \item{sf}{SoundFont object as returned by \code{read_sf2()}}

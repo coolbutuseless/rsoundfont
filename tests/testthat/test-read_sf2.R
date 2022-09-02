@@ -10,7 +10,7 @@ test_that("multiplication works", {
   sf <- read_sf2("sf2/florestan-subset.sf2")
   
   expect_true(is.list(sf))
-  expect_identical(names(sf), c("sfbk", "sdta", "pdta"))
+  expect_identical(names(sf), c("file", "sfbk", "sdta", "pdta"))
   
   expect_identical(
     names(sf$pdta$shdr),

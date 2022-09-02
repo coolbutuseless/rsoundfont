@@ -507,6 +507,7 @@ parse_sfbk <- function(con) {
 #' @noRd
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_sdta <- function(con) {
+  
   magic <- readChar(con, 4) #LIST
   stopifnot(magic == 'LIST')
   size <- read_uint32(con)
@@ -517,11 +518,31 @@ parse_sdta <- function(con) {
   stopifnot(magic == 'smpl')
   size <- read_uint32(con)
   
-  sdta <- read_sint16(con, n = size/2) 
-  sdta[sdta < 0] <- sdta[sdta < 0] / 32767
-  sdta[sdta > 0] <- sdta[sdta > 0] / 32768
+  addr <- seek(con, where = NA)
+  message("sdta offset: ", addr)
   
-  sdta
+  if (TRUE) {
+    # Lazy loading of sample data.
+    # just make a note of where the sample data starts and its size.
+    # skip over all this data and read on to the next chunk.
+    sdta <- NA
+    seek(con, where = size, origin = 'current')
+  } else {
+    # Greedy loading of sample data.
+    stop("no longer support greedy")
+    sdta <- read_sint16(con, n = size/2) 
+    sdta[sdta < 0] <- sdta[sdta < 0] / 32767
+    sdta[sdta > 0] <- sdta[sdta > 0] / 32768
+  }
+  
+  message("sdta end: ", seek(con, where = NA))
+  
+  
+  list(
+    addr = addr,
+    n    = size/2,
+    data = sdta
+  )
 }
 
 
@@ -558,6 +579,7 @@ read_sf2 <- function(filename) {
 
   
   list(
+    file = filename,
     sfbk = sfbk,
     sdta = sdta,
     pdta = pdta
@@ -566,6 +588,26 @@ read_sf2 <- function(filename) {
 
 
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#' Helper function to read 16 bit sample data from a soundfont file
+#' @param con connection
+#' @param nsamples number of 16 bit samples to read
+#' @param sample_offset how many 16bit samples to skip over to get to the start
+#' @param sdta_addr the byte offset of the start of the SDTA sample data.
+#'
+#' @return Numeric vector of data in range [-1, 1]
+#' @noRd
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+read_sdta_sample <- function(con, nsamples, sample_offset, sdta_addr) {
+  seek(con, where = sdta_addr, origin = 'start')
+  seek(con, where = sample_offset * 2, origin = 'current')
+  data <- readBin(con, 'integer', nsamples, size=2, endian = 'little', signed = TRUE) 
+  data[data < 0] <- data[data < 0] / 32767
+  data[data > 0] <- data[data > 0] / 32768
+  
+  data
+}
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #' Create an \code{audioSample} sample for an instrument from a SoundFont
@@ -587,7 +629,7 @@ read_sf2 <- function(filename) {
 #' 
 #' @export
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-create_sample <- function(sf, inst, dur) {
+create_sample <- function(sf, inst, dur = NULL) {
   
   hdr <- sf$pdta$shdr[[inst]]
   if (is.null(hdr)) {
@@ -597,20 +639,51 @@ create_sample <- function(sf, inst, dur) {
   # cat(sprintf("%03i", i), hdr$rate, hdr$key, hdr$link, hdr$type, hdr$name, "\n")
   natural_dur <- (hdr$end - hdr$start) / hdr$rate
   
+  con <- file(sf$file, 'rb')
+  on.exit(close(con))
+  sdta_addr <- sf$sdta$addr
+  
+  if (!is.null(dur) && dur <= natural_dur) {
+    message(sprintf(
+      "Natural duration (%.1fs) is longer than requested duration (%.1fs). Not truncating",
+      natural_dur, dur
+    ))
+  }
+  
+  
   if (is.null(dur) || dur <= natural_dur) {
-    data <- sf$sdta[1 + (hdr$start:hdr$end)]
+    data <- read_sdta_sample(
+      con           = con,
+      nsamples      = hdr$end - hdr$start + 1L,
+      sample_offset = hdr$start,
+      sdta_addr     = sdta_addr 
+    )
   } else {
     
     pre_loop_dur  <- (hdr$loop_start - hdr$start)      / hdr$rate
     loop_dur      <- (hdr$loop_end   - hdr$loop_start) / hdr$rate
     post_loop_dur <- (hdr$end        - hdr$loop_end)   / hdr$rate
-    
     Nloops <- ceiling((dur - pre_loop_dur - post_loop_dur) / loop_dur)
     
-    pre_data <- sf$sdta[(hdr$start +1):hdr$loop_start]
-    loop     <- sf$sdta[(hdr$loop_start + 1):hdr$loop_end]
+    pre_data <- read_sdta_sample(
+      con           = con,
+      nsamples      = hdr$loop_start - hdr$start,
+      sample_offset = hdr$start,
+      sdta_addr     = sdta_addr 
+    )
+    loop     <- read_sdta_sample(
+      con           = con,
+      nsamples      = hdr$loop_end - hdr$loop_start,
+      sample_offset = hdr$loop_start,
+      sdta_addr     = sdta_addr 
+    )
     loop     <- rep(loop, Nloops)
-    post_data <- sf$sdta[1 + (hdr$loop_end:hdr$end)]
+    post_data <- read_sdta_sample(
+      con           = con,
+      nsamples      = hdr$end - hdr$loop_end + 1,
+      sample_offset = hdr$loop_end,
+      sdta_addr     = sdta_addr 
+    )
     
     data <- c(pre_data, loop, post_data)
   }
@@ -634,27 +707,37 @@ if (FALSE) {
   filename <- 'working/AWE ROM gm.sf2'
   # filename <- '/Users/mike/projectsdata/soundfonts/jnsgm2/Jnsgm2.sf2'
   
+  filename <- '/Users/mike/projectsdata/soundfonts/Essential Keys-sforzando-v9.6.sf2'
   filename <- '/Users/mike/projectsdata/soundfonts/weedsgm4_update.sf2'
   
   # https://github.com/bradhowes/SoundFonts
   # License MIT
-  # filename <- '/Users/mike/projectsdata/soundfonts/fluidr3_gm.sf2'
+  filename <- '/Users/mike/projectsdata/soundfonts/fluidr3_gm.sf2'
   
   sf <- read_sf2(filename)
   
   # Names of all instruments
   names(sf$pdta$shdr)
   
-  sf$pdta$shdr$`U-banjog2`
+  # sf$pdta$shdr$`U-banjog2`
   
   
-  samp <- create_sample(sf, 'Mandolin Trem E5', 1)
+  # samp <- create_sample(sf, inst = 'Mandolin Trem E5', 1)
+  # audio::play(samp)
+  
+  samp2 <- create_sample_lazy(sf, 'Bottle Chiff C7(L)', NULL)
+  audio::play(samp2)
+  
+  identical(samp, samp2)
+  length(samp)
+  length(samp2)
+  
+  head(which(samp != samp2))
+  
+  samp <- create_sample_lazy(sf, 'Mandolin Trem C5', 1)
   audio::play(samp)
   
-  samp <- create_sample(sf, 'Mandolin Trem C5', 1)
-  audio::play(samp)
-  
-  samp <- create_sample(sf, 'Mandolin Trem A4', 1)
+  samp <- create_sample_lazy(sf, 'Mandolin Trem A4', 1)
   audio::play(samp)
   
   

@@ -10,10 +10,10 @@
 
 `{rsoundfont}` is a package for parsing
 [soundfont](https://en.wikipedia.org/wiki/SoundFont) files which contain
-audio data representing musical instruments.
+audio data representing multiple musical instruments.
 
 Soundfont files are a common way of distributing a set of music
-instruments as audio samples, and is often used for
+instruments as audio samples, and are often used for
 [MIDI](https://en.wikipedia.org/wiki/MIDI) playback support on various
 computers and mobile devices.
 
@@ -27,12 +27,15 @@ though the actual sample is of a much shorter period.
 ## What’s in the box
 
 -   `read_sf2(sf2_filename)` read a SoundFont file into a nested list of
-    R objects
+    R objects.
+    -   This parses the meta-information about the samples only.
+    -   Audio data is only read later, as required, when calling
+        `create_sample()`
 -   `create_sample(sf, inst, dur)` create a playable sample of the given
     instrument. Sample will be looped to the given duration.
     -   This will return an `audioSample` object compatible with the
         [`{audio}`](https://cran.r-project.org/package=audio) package.
-    -   Play the sample with `audio::play()`
+    -   Once created, you can play the sample with `audio::play()`
 
 ## SoundFont Technical Specification
 
@@ -41,6 +44,17 @@ The technical specification for SoundFont v2.04 is available
 
 This package currently uses the chunk naming conventions from the
 specification.
+
+## Lazy loading of sound data
+
+Audio data for samples can be large - quality SoundFont files can easily
+contain data for hundreds of instruments with a gigbyte of audio
+samples. Many of these instruments will never be used in a particular
+session.
+
+So rather than loading all this audio data up-front, a reference to the
+soundfont file is kept, and audio data is loaded from the file as
+instruments areneeded e.g. in `create_sample()`
 
 ## Limitations
 
@@ -58,7 +72,10 @@ specification.
         haven’t seen any of these in the wild, and this current package
         will throw an error if this is the case. Please let me know in
         the github issues if this occurs.
+    -   Stereo samples may be possible in a soundfont, but I haven’t
+        seen any just yet.
 -   No support for `*.sfArk` or `*.sfz` compressed files.
+    -   Is there an open source convertor/decompressor for these?
 
 \*\* Please let me know of any `*.sf2` files which this package cannot
 parse \*\*
@@ -70,17 +87,6 @@ parse \*\*
 Audio samples within a SoundFont are supplied at one (or maybe a few)
 different pitches. In order to be general useful as an instrument for
 MIDI playback, some facility will have to be added for pitch-shifting.
-
-#### Lazy loading of SoundFont audio data
-
-Audio data for samples can be large - quality SoundFont files can easily
-contain a gigbyte of audio samples. Rather than loading all these
-up-front, it should be possible to keep a reference to the file and
-lazily load audio data when an instrument is needed.
-
-Currently I am only working with smaller SoundFont files and do not
-presently have the need for this. Contact me if this is something you
-need.
 
 ## Installation
 
@@ -108,6 +114,8 @@ library(rsoundfont)
 filename <- '/Users/mike/projectsdata/soundfonts/weedsgm4_update.sf2'
 
 sf <- read_sf2(filename)
+#> sdta offset: 368
+#> sdta end: 14908536
 
 # Names of all instruments
 head(names(sf$pdta$shdr), 20)
