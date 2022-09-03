@@ -64,19 +64,6 @@ read_genamounttype <- read_uint16
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_phdr <- function(con) {
   
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      name    = trimws(read_char(con, 20)),
-      preset  = read_uint16(con),
-      bank    = read_uint16(con),
-      bag_idx = read_uint16(con),
-      library = read_uint32(con),
-      genre   = read_uint32(con),
-      morpho  = read_uint32(con)
-    )
-  }
-  
   # Chunk name and length  
   nm   <- 'phdr'
   len  <- 38
@@ -87,30 +74,45 @@ parse_phdr <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
-  # Set names
-  nms <- vapply(res, function(x) {x$name}, character(1))
-  names(res) <- nms
+  # Pre-allocate
+  name    <- character(N)
+  preset  <- integer(N)
+  bank    <- integer(N)
+  bag_idx <- integer(N)
+  library <- integer(N)
+  genre   <- integer(N)
+  morpho  <- integer(N)
   
+  # read in
+  for (i in seq.int(N)) {
+    name    [i] = trimws(read_char(con, 20))
+    preset  [i] = read_uint16(con)
+    bank    [i] = read_uint16(con)
+    bag_idx [i] = read_uint16(con)
+    library [i] = read_uint32(con)
+    genre   [i] = read_uint32(con)
+    morpho  [i] = read_uint32(con)
+  }
   
-  res
+  data.frame(
+    name    ,
+    preset  ,
+    bank    ,
+    bag_idx ,
+    library ,
+    genre   ,
+    morpho  ,
+    stringsAsFactors = FALSE
+  )
 }
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Parse 'pbag' preset bag
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_pbag <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      gen_idx  = read_uint16(con),
-      mod_idx  = read_uint16(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'pbag'
@@ -122,12 +124,24 @@ parse_pbag <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
+  # Pre-allocate
+  gen_idx <- integer(N)
+  mod_idx <- integer(N)
   
-  res
+  # Read in
+  for (i in seq.int(N)) {
+    gen_idx [i] = read_uint16(con)
+    mod_idx [i] = read_uint16(con)
+  }
+  
+  data.frame(
+    gen_idx,
+    mod_idx,
+    stringsAsFactors = FALSE
+  )
 }
 
 
@@ -136,17 +150,6 @@ parse_pbag <- function(con) {
 # Parse 'pmod' preset modulator
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_pmod <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      mod_src_oper       = read_sfmodulator(con),
-      mod_dst_oper       = read_sfgenerator(con),
-      amount             = read_sint16(con),
-      mod_amt_src_oper   = read_sfmodulator(con),
-      mod_amt_trans_oper = read_sfgenerator(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'pmod'
@@ -158,12 +161,33 @@ parse_pmod <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
+  # Pre-allocate
+  mod_src_oper       <- integer(N)
+  mod_dst_oper       <- integer(N)
+  amount             <- integer(N)
+  mod_amt_src_oper   <- integer(N)
+  mod_amt_trans_oper <- integer(N)
   
-  res
+  # Read in
+  for (i in seq.int(N)) {
+    mod_src_oper       [i] = read_sfmodulator(con)
+    mod_dst_oper       [i] = read_sfgenerator(con)
+    amount             [i] = read_sint16(con)
+    mod_amt_src_oper   [i] = read_sfmodulator(con)
+    mod_amt_trans_oper [i] = read_sfgenerator(con)
+  }
+  
+  data.frame(
+    mod_src_oper      ,
+    mod_dst_oper      ,
+    amount            ,
+    mod_amt_src_oper  ,
+    mod_amt_trans_oper,
+    stringsAsFactors = TRUE
+  )
 }
 
 
@@ -172,14 +196,6 @@ parse_pmod <- function(con) {
 # Parse 'pgen'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_pgen <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      oper   = read_sfgenerator(con),
-      amount = read_genamounttype(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'pgen'
@@ -191,12 +207,24 @@ parse_pgen <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
+  # Pre-allocate
+  oper   <- integer(N)
+  amount <- integer(N)
   
-  res
+  # Read in
+  for (i in seq.int(N)) {
+    oper   [i] = read_sfgenerator(con)
+    amount [i] = read_genamounttype(con)
+  }
+  
+  data.frame(
+    oper   ,
+    amount ,
+    stringsAsFactors = FALSE
+  )
 }
 
 
@@ -205,13 +233,6 @@ parse_pgen <- function(con) {
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_inst <- function(con) {
   
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      name    = trimws(read_char(con, 20)),
-      bag_idx = read_uint16(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'inst'
@@ -223,30 +244,30 @@ parse_inst <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
-  # Set names
-  nms <- vapply(res, function(x) {x$name}, character(1))
-  names(res) <- nms
+  # Pre-allocate
+  name    <- character(N)
+  bag_idx <- integer(N)
   
+  # Read-in
+  for (i in seq.int(N)) {
+    name    [i] = trimws(read_char(con, 20))
+    bag_idx [i] = read_uint16(con)
+  }
   
-  res
+  data.frame(
+    name    ,
+    bag_idx ,
+    stringsAsFactors = FALSE
+  )
 }
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Parse 'ibag' 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_ibag <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      gen_idx  = read_uint16(con),
-      mod_idx  = read_uint16(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'ibag'
@@ -258,12 +279,24 @@ parse_ibag <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
+
+  # Preallocate
+  gen_idx <- integer(N)
+  mod_idx <- integer(N)
   
+  # Read in
+  for (i in seq.int(N)) {
+    gen_idx  [i] = read_uint16(con)
+    mod_idx  [i] = read_uint16(con)
+  }
   
-  res
+  data.frame(
+    gen_idx,
+    mod_idx,
+    stringsAsFactors = FALSE
+  )
 }
 
 
@@ -271,17 +304,6 @@ parse_ibag <- function(con) {
 # Parse 'imod'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_imod <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      src_oper       = read_sfmodulator(con),
-      dst_oper       = read_sfgenerator(con),
-      amount         = read_sint16(con),
-      amt_src_oper   = read_sfmodulator(con),
-      amt_trans_oper = read_sfgenerator(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'imod'
@@ -293,12 +315,34 @@ parse_imod <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
+  # Pre-allocate
+  src_oper       <- integer(N)
+  dst_oper       <- integer(N)
+  amount         <- integer(N)
+  amt_src_oper   <- integer(N)
+  amt_trans_oper <- integer(N)
   
-  res
+  # Read in
+  for (i in seq.int(N)) {
+    src_oper       [i] = read_sfmodulator(con)
+    dst_oper       [i] = read_sfgenerator(con)
+    amount         [i] = read_sint16(con)
+    amt_src_oper   [i] = read_sfmodulator(con)
+    amt_trans_oper [i] = read_sfgenerator(con)
+  }
+  
+  data.frame(
+    src_oper      ,
+    dst_oper      ,
+    amount        ,
+    amt_src_oper  ,
+    amt_trans_oper,
+    stringsAsFactors = FALSE
+  )
+  
 }
 
 
@@ -306,14 +350,6 @@ parse_imod <- function(con) {
 # Parse 'igen'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_igen <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      oper   = read_sfgenerator(con),
-      amount = read_genamounttype(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'igen'
@@ -325,12 +361,24 @@ parse_igen <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
+  # Pre-allocate space
+  oper   = integer(N)
+  amount = integer(N)
   
-  res
+  # Read in
+  for (i in seq.int(N)) {
+    oper   [i] = read_sfgenerator(con)
+    amount [i] = read_genamounttype(con)
+  }
+  
+  data.frame(
+    oper,
+    amount,
+    stringsAsFactors = FALSE
+  )
 }
 
 
@@ -338,22 +386,6 @@ parse_igen <- function(con) {
 # Parse 'shdr'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 parse_shdr <- function(con) {
-  
-  # Parse a single instance of this chunk
-  parse_single <- function(...) {
-    list(
-      name       = read_char(con, 20),
-      start      = read_uint32(con),
-      end        = read_uint32(con),
-      loop_start = read_uint32(con),
-      loop_end   = read_uint32(con),
-      rate       = read_uint32(con),
-      key        = read_uint8(con),
-      correction = read_sint8(con),
-      link       = read_uint16(con),
-      type       = read_sfsamplelink(con)
-    )
-  }
   
   # Chunk name and length  
   nm   <- 'shdr'
@@ -365,16 +397,48 @@ parse_shdr <- function(con) {
     stop(nm, " size should be a multiple of ", len, ". Got: ", size)
   }
   
-  # Parse all
+  # Number of records to read
   N   <- size / len
-  res <- lapply(seq_len(N), parse_single)
   
-  # Set names
-  nms <- vapply(res, function(x) {x$name}, character(1))
-  names(res) <- nms
+  # pre-allocate space
+  name       <- character(N)
+  start      <- integer(N)
+  end        <- integer(N)
+  loop_start <- integer(N)
+  loop_end   <- integer(N)
+  rate       <- integer(N)
+  key        <- integer(N)
+  correction <- integer(N)
+  link       <- integer(N)
+  type       <- integer(N)
   
+  # Read into pre-allocated space
+  for (i in seq.int(N)) {
+    name      [i] = read_char(con, 20)
+    start     [i] = read_uint32(con)
+    end       [i] = read_uint32(con)
+    loop_start[i] = read_uint32(con)
+    loop_end  [i] = read_uint32(con)
+    rate      [i] = read_uint32(con)
+    key       [i] = read_uint8(con)
+    correction[i] = read_sint8(con)
+    link      [i] = read_uint16(con)
+    type      [i] = read_sfsamplelink(con)
+  }
   
-  res
+  data.frame(
+    name      ,
+    start     ,
+    end       ,
+    loop_start,
+    loop_end  ,
+    rate      ,
+    key       ,
+    correction,
+    link      ,
+    type      ,
+    stringsAsFactors = FALSE
+  )
 }
 
 
@@ -614,7 +678,7 @@ read_sdta_sample <- function(con, nsamples, sample_offset, sdta_addr) {
 #' 
 #' @param sf SoundFont object as returned by \code{read_sf2()}
 #' @param inst instrument index (integer) or name (string).  
-#'        See \code{names(sf$pdta$shdr)} for the names of all instruments
+#'        See \code{sf$pdta$shdr$name} for the names of all instruments
 #' @param dur note duration in seconds. Default value of NULL indicates to 
 #'        play the sample as is.  If a non-NULL duration is given, then 
 #' \itemize{
@@ -631,7 +695,16 @@ read_sdta_sample <- function(con, nsamples, sample_offset, sdta_addr) {
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 create_sample <- function(sf, inst, dur = NULL) {
   
-  hdr <- sf$pdta$shdr[[inst]]
+  if (is.numeric(inst)) {
+    hdr <- sf$pdta$shdr[inst, ]
+  } else {
+    hdr <- subset(sf$pdta$shdr, sf$pdta$shdr$name == inst)
+  }
+  
+  if (nrow(hdr) != 1) {
+    stop("Coudn't find instrument")
+  }
+  
   if (is.null(hdr)) {
     stop("Instrument '", inst, "' not found. See 'names(sf$pdta$shdr)'")
   }
@@ -714,10 +787,12 @@ if (FALSE) {
   # License MIT
   filename <- '/Users/mike/projectsdata/soundfonts/fluidr3_gm.sf2'
   
+  start <- Sys.time()
   sf <- read_sf2(filename)
+  print(Sys.time() - start)
   
   # Names of all instruments
-  names(sf$pdta$shdr)
+  sf$pdta$shdr$name
   
   # sf$pdta$shdr$`U-banjog2`
   
@@ -725,16 +800,11 @@ if (FALSE) {
   # samp <- create_sample(sf, inst = 'Mandolin Trem E5', 1)
   # audio::play(samp)
   
-  samp2 <- create_sample_lazy(sf, 'Bottle Chiff C7(L)', NULL)
+  samp2 <- create_sample(sf, 'Gun', NULL)
   audio::play(samp2)
   
-  identical(samp, samp2)
-  length(samp)
-  length(samp2)
   
-  head(which(samp != samp2))
-  
-  samp <- create_sample_lazy(sf, 'Mandolin Trem C5', 1)
+  samp <- create_sample(sf, 5, 1)
   audio::play(samp)
   
   samp <- create_sample_lazy(sf, 'Mandolin Trem A4', 1)

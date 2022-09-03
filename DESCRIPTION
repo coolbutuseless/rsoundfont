@@ -1,7 +1,7 @@
 Package: rsoundfont
 Type: Package
 Title: Load Soundfont Audio Data
-Version: 0.1.0
+Version: 0.1.2
 Author: mikefc
 Maintainer: mikefc <mikefc@coolbutuseless.com>
 Description: Load SoundFont files.

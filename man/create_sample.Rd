@@ -10,7 +10,7 @@ create_sample(sf, inst, dur = NULL)
 \item{sf}{SoundFont object as returned by \code{read_sf2()}}
 
 \item{inst}{instrument index (integer) or name (string).
-See \code{names(sf$pdta$shdr)} for the names of all instruments}
+See \code{sf$pdta$shdr$name} for the names of all instruments}
 
 \item{dur}{note duration in seconds. Default value of NULL indicates to 
        play the sample as is.  If a non-NULL duration is given, then 

@@ -32,6 +32,7 @@ for a sample playtime to be extended by repeating pre-determined sections of the
 is useful when simulating (for example) a piano note held for a number of seconds, even though
 the actual sample is of a much shorter period.
 
+
 ## What's in the box
 
 * `read_sf2(sf2_filename)` read a SoundFont file into a nested list of R objects.

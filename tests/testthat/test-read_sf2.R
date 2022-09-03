@@ -13,7 +13,7 @@ test_that("multiplication works", {
   expect_identical(names(sf), c("file", "sfbk", "sdta", "pdta"))
   
   expect_identical(
-    names(sf$pdta$shdr),
+    sf$pdta$shdr$name,
     c("ACCFR68A", "ACCFR96A", "BAGPP64A", "BAGPP74A", "BAGPP84A", 
       "BAGPP93A", "BRASS64", "BRASS72A", "BRASS84A", "BS_LD48", "BS_LD72", 
       "CELSTA1", "C_ORG46A", "C_ORG56A", "C_ORG66A", "JAZGTA1A", "MRMBA50", 
