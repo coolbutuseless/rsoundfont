@@ -38,11 +38,24 @@ the actual sample is of a much shorter period.
 * `read_sf2(sf2_filename)` read a SoundFont file into a nested list of R objects.
     * This parses the meta-information about the samples only.
     * Audio data is only read later, as required, when calling `create_sample()`
-* `create_sample(sf, inst, dur)` create a playable sample of the given instrument.
+* `create_instruments(sf)` to create a set of zone generators and modulators for each instrument.
+    * This will probably become one of the main methods of post-processing the
+      raw results from `read_sf2()`
+    * Currently it parses out the zone generators for each instrument which gives 
+      information such as:
+        * which key range this zone is valid for
+        * root key and tuning information
+        * which sample should be played for this instrument in this zone.
+    * Eventually this becomes the main pathway to playing an instrument at a particular
+      note - as if a key had been pressed on a MIDI keyboard.
+* `create_sample(sf, inst, dur)` create a playable sample of the given instrument audio.
   Sample will be looped to the given duration. 
     * This will return an `audioSample` object compatible with the
     [`{audio}`](https://cran.r-project.org/package=audio) package.
     * Once created, you can play the sample with `audio::play()`
+    * Note: instruments have multiple audio samples.  Choosing which sample should
+      be played for a particular key is part of the zone generator information
+      returned by `create_instruments()`
 
 ## SoundFont Technical Specification
 

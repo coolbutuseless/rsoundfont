@@ -1,4 +1,10 @@
 
+
+# rsoundfont 0.1.3  2022-09-04
+
+* Added `create_instruments()` to accumulate the zone generator information
+  for each instrument.
+
 # rsoundfont 0.1.2  2022-09-03
 
 * Parse information into `data.frames` instead of nested lists

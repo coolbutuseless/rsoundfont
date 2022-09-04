@@ -1,4 +1,74 @@
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Generators
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+generator <- c(
+  'startAddrsOffset',  # 0
+  'endAddrsOffset',    # 1
+  'startloopAddrsOffset',
+  'endloopAdrsOffset',
+  'startAddrsCoarseOffset',
+  'modLfoToPitch',
+  'vibLfoToPitch',
+  'modEnvToPitch',
+  'initialFilterFc',
+  'initialFilterQ',
+  'modLfoToFilterFc',
+  'modEnvToFilterFc',
+  'endAddrsCoarseOffset',
+  'modLfoToVolume',
+  'unsed1',
+  'chorusEffectsSend',
+  'reverbEffectsSend',
+  'pan',
+  'unused2', # 18
+  'unsed3', 
+  'unused4', 
+  'delayModLFO',
+  'freqModLFO',
+  'delayVibLFO', 
+  'freqVibLFO',
+  'delayModEnv',
+  'attackModEnv',
+  'holdModEnv', # 27
+  'decayModEnv', 
+  'sustainModEnv',
+  'releaseModEnv', 
+  'keynumToModEnvHold', 
+  'keynumToModEnvDecay',
+  'delayVolEnv', 
+  'attackVolEnv', 
+  'holdVolEnv',
+  'decayVolEnv', 
+  'sustainVolEnv',
+  'releaseVolEnv',
+  'keynumToVolEnvHold',
+  'keynumTovolEnvDecay',
+  'instrument', # 41 index into INST
+  'reserved1', 
+  'keyRange',
+  'velRange',
+  'startloopAddrsCoarseOffset',
+  'keynum', 
+  'velocity', 
+  'initialAttenuation',
+  'reserved2', 
+  'endloopAddrsCoarseOffset', 
+  'coarseTune',
+  'fineTune', 
+  'sampleID',    # 53 Index into SHDR
+  'sampleModes', 
+  'reserved3', # 55
+  'scaleTuning', 
+  'exclusiveClass', 
+  'overrdingRootKey',
+  'unused5', 
+  'endOper' # 60
+)
+
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Read from file
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,6 +172,8 @@ parse_phdr <- function(con) {
     preset  ,
     bank    ,
     bag_idx ,
+    bag_end = c(bag_idx[-1], Inf) - 1,
+    bag_len =  c(bag_idx[-1], Inf) - bag_idx,
     library ,
     genre   ,
     morpho  ,
@@ -139,6 +211,8 @@ parse_pbag <- function(con) {
   
   data.frame(
     gen_idx,
+    gen_end = c(gen_idx[-1], Inf) - 1,
+    gen_len = c(gen_idx[-1], Inf) - gen_idx,
     mod_idx,
     stringsAsFactors = FALSE
   )
@@ -260,6 +334,8 @@ parse_inst <- function(con) {
   data.frame(
     name    ,
     bag_idx ,
+    bag_end = c(bag_idx[-1], Inf) - 1,
+    bag_len =  c(bag_idx[-1], Inf) - bag_idx,
     stringsAsFactors = FALSE
   )
 }
@@ -294,7 +370,11 @@ parse_ibag <- function(con) {
   
   data.frame(
     gen_idx,
+    gen_end = c(gen_idx[-1], Inf) - 1,
+    gen_len = c(gen_idx[-1], Inf) - gen_idx,
     mod_idx,
+    mod_end = c(mod_idx[-1], Inf) - 1,
+    mod_len = c(mod_idx[-1], Inf) - mod_idx,
     stringsAsFactors = FALSE
   )
 }
@@ -377,6 +457,9 @@ parse_igen <- function(con) {
   data.frame(
     oper,
     amount,
+    desc = generator[oper + 1],
+    val1 = ifelse(oper == 43, bitwAnd(amount, 255), NA),
+    val2 = ifelse(oper == 43, bitwShiftR(amount, 8), NA),
     stringsAsFactors = FALSE
   )
 }
@@ -774,15 +857,12 @@ create_sample <- function(sf, inst, dur = NULL) {
 
 if (FALSE) {
   
+  library(dplyr)
+  library(purrr)
+  
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Parse the bytes from a soundfont
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  filename <- 'working/AWE ROM gm.sf2'
-  # filename <- '/Users/mike/projectsdata/soundfonts/jnsgm2/Jnsgm2.sf2'
-  
-  filename <- '/Users/mike/projectsdata/soundfonts/Essential Keys-sforzando-v9.6.sf2'
-  filename <- '/Users/mike/projectsdata/soundfonts/weedsgm4_update.sf2'
-  
   # https://github.com/bradhowes/SoundFonts
   # License MIT
   filename <- '/Users/mike/projectsdata/soundfonts/fluidr3_gm.sf2'
@@ -794,12 +874,6 @@ if (FALSE) {
   # Names of all instruments
   sf$pdta$shdr$name
   
-  # sf$pdta$shdr$`U-banjog2`
-  
-  
-  # samp <- create_sample(sf, inst = 'Mandolin Trem E5', 1)
-  # audio::play(samp)
-  
   samp2 <- create_sample(sf, 'Gun', NULL)
   audio::play(samp2)
   
@@ -807,23 +881,40 @@ if (FALSE) {
   samp <- create_sample(sf, 5, 1)
   audio::play(samp)
   
-  samp <- create_sample_lazy(sf, 'Mandolin Trem A4', 1)
-  audio::play(samp)
   
+  # Get instrument generators
+  inst <- sf$pdta$inst %>% filter(grepl("banjo", name, ignore.case = TRUE))
+  inst
+  ibag <- sf$pdta$ibag %>% slice(1 + inst$bag_idx:inst$bag_end)
+  ibag
   
-  if (FALSE) {
-    con <- file(filename, 'rb')
+  igen <- list()
+  for (i in seq.int(nrow(ibag))) {
+    row <- ibag[i,]
+    igen[[i]] <- sf$pdta$igen[1 + row$gen_idx:row$gen_end,]
+  }
+  igen
+  
+  first_gen_is_global <- !53 %in% igen[[1]]$oper
+  if (first_gen_is_global) {
+    global <- igen[[1]]
+    igen <- igen[-1]
     
-    sfbk <- parse_sfbk(con)
-    sdta <- parse_sdta(con)
-    pdta <- parse_pdta(con)
+    # Merge global with zone generator
+    for (i in seq_along(igen)) {
+      # keep only things in global that aren't overridden local
+      local <- igen[[i]]
+      this_global <- global[!global$oper %in% local$oper,]
+      igen[[i]] <- rbind(this_global, local)
+    }
     
-    # Reamining bytes in stream should be ZERO
-    rem_bytes <- readBin(con, 'raw', 1e4)
-    stopifnot(length(rem_bytes) == 0)
   }
   
   
+  
+  
+  sf$pdta$shdr %>% filter(grepl("banjo", name, ignore.case = TRUE))
+  # idx <- 476 477 478 479 480 481
 }
 
 

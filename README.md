@@ -31,11 +31,27 @@ though the actual sample is of a much shorter period.
     -   This parses the meta-information about the samples only.
     -   Audio data is only read later, as required, when calling
         `create_sample()`
+-   `create_instruments(sf)` to create a set of zone generators and
+    modulators for each instrument.
+    -   This will probably become one of the main methods of
+        post-processing the raw results from `read_sf2()`
+    -   Currently it parses out the zone generators for each instrument
+        which gives information such as:
+        -   which key range this zone is valid for
+        -   root key and tuning information
+        -   which sample should be played for this instrument in this
+            zone.
+    -   Eventually this becomes the main pathway to playing an
+        instrument at a particular note - as if a key had been pressed
+        on a MIDI keyboard.
 -   `create_sample(sf, inst, dur)` create a playable sample of the given
-    instrument. Sample will be looped to the given duration.
+    instrument audio. Sample will be looped to the given duration.
     -   This will return an `audioSample` object compatible with the
         [`{audio}`](https://cran.r-project.org/package=audio) package.
     -   Once created, you can play the sample with `audio::play()`
+    -   Note: instruments have multiple audio samples. Choosing which
+        sample should be played for a particular key is part of the zone
+        generator information returned by `create_instruments()`
 
 ## SoundFont Technical Specification
 
@@ -119,43 +135,12 @@ sf <- read_sf2(filename)
 
 # Names of all instruments
 head(names(sf$pdta$shdr), 20)
-#>  [1] "Leslig5(L)"       "Leslig5(R)"       "Leslid5(L)"       "Leslid5(R)"      
-#>  [5] "Leslie4(L)"       "Leslie4(R)"       "Leslifs3(L)"      "Leslifs3(R)"     
-#>  [9] "Lesligs2(L)"      "Lesligs2(R)"      "Leslias1(L)"      "Leslias1(R)"     
-#> [13] "Leslic1(L)"       "Leslic1(R)"       "Mandolin Trem E5" "Mandolin Trem C5"
-#> [17] "Mandolin Trem A4" "Mandolin Trem G4" "Mandolin Trem E4" "Mandolin Trem C4"
+#>  [1] "name"       "start"      "end"        "loop_start" "loop_end"  
+#>  [6] "rate"       "key"        "correction" "link"       "type"
 
 # Some Sample/looping information about an instrument
 sf$pdta$shdr[['Mandolin Trem E5']]
-#> $name
-#> [1] "Mandolin Trem E5"
-#> 
-#> $start
-#> [1] 1246934
-#> 
-#> $end
-#> [1] 1289001
-#> 
-#> $loop_start
-#> [1] 1266182
-#> 
-#> $loop_end
-#> [1] 1288993
-#> 
-#> $rate
-#> [1] 44100
-#> 
-#> $key
-#> [1] 60
-#> 
-#> $correction
-#> [1] 0
-#> 
-#> $link
-#> [1] 0
-#> 
-#> $type
-#> [1] 1
+#> NULL
 ```
 
 ``` r
