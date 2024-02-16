@@ -132,15 +132,15 @@ remotes::install_github('coolbutuseless/rsoundfont')
 library(rsoundfont)
 
 # Source: https://www.philscomputerlab.com/general-midi-and-soundfonts.html
-filename <- '/Users/mike/projectsdata/soundfonts/weedsgm4_update.sf2'
+filename <- './working/weedsgm4_update.sf2'
 
 sf <- read_sf2(filename)
 
 # Names of all instruments
-head(names(sf$pdta$shdr), 20)
+head(sf$pdta$shdr$name, 20)
 
 # Some Sample/looping information about an instrument
-sf$pdta$shdr[['Mandolin Trem E5']]
+sf$pdta$shdr |> subset(name == 'Mandolin Trem E5')
 ```
 
 

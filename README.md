@@ -26,32 +26,30 @@ though the actual sample is of a much shorter period.
 
 ## What’s in the box
 
--   `read_sf2(sf2_filename)` read a SoundFont file into a nested list of
-    R objects.
-    -   This parses the meta-information about the samples only.
-    -   Audio data is only read later, as required, when calling
-        `create_sample()`
--   `create_instruments(sf)` to create a set of zone generators and
-    modulators for each instrument.
-    -   This will probably become one of the main methods of
-        post-processing the raw results from `read_sf2()`
-    -   Currently it parses out the zone generators for each instrument
-        which gives information such as:
-        -   which key range this zone is valid for
-        -   root key and tuning information
-        -   which sample should be played for this instrument in this
-            zone.
-    -   Eventually this becomes the main pathway to playing an
-        instrument at a particular note - as if a key had been pressed
-        on a MIDI keyboard.
--   `create_sample(sf, inst, dur)` create a playable sample of the given
-    instrument audio. Sample will be looped to the given duration.
-    -   This will return an `audioSample` object compatible with the
-        [`{audio}`](https://cran.r-project.org/package=audio) package.
-    -   Once created, you can play the sample with `audio::play()`
-    -   Note: instruments have multiple audio samples. Choosing which
-        sample should be played for a particular key is part of the zone
-        generator information returned by `create_instruments()`
+- `read_sf2(sf2_filename)` read a SoundFont file into a nested list of R
+  objects.
+  - This parses the meta-information about the samples only.
+  - Audio data is only read later, as required, when calling
+    `create_sample()`
+- `create_instruments(sf)` to create a set of zone generators and
+  modulators for each instrument.
+  - This will probably become one of the main methods of post-processing
+    the raw results from `read_sf2()`
+  - Currently it parses out the zone generators for each instrument
+    which gives information such as:
+    - which key range this zone is valid for
+    - root key and tuning information
+    - which sample should be played for this instrument in this zone.
+  - Eventually this becomes the main pathway to playing an instrument at
+    a particular note - as if a key had been pressed on a MIDI keyboard.
+- `create_sample(sf, inst, dur)` create a playable sample of the given
+  instrument audio. Sample will be looped to the given duration.
+  - This will return an `audioSample` object compatible with the
+    [`{audio}`](https://cran.r-project.org/package=audio) package.
+  - Once created, you can play the sample with `audio::play()`
+  - Note: instruments have multiple audio samples. Choosing which sample
+    should be played for a particular key is part of the zone generator
+    information returned by `create_instruments()`
 
 ## SoundFont Technical Specification
 
@@ -74,24 +72,24 @@ instruments areneeded e.g. in `create_sample()`
 
 ## Limitations
 
--   This package should load most SoundFont files with version v2.00 or
-    greater
--   This package currently uses the chunk naming conventions from the
-    specification. This is not always very easy to read/parse, and users
-    are directed to the specification for interpretation of the data
-    structure.
--   Unsupported for now as I couldn’t find any test files
-    -   24bit Samples (If you know of any 24bit Soundfont files, please
-        let me know in the github issues)
-    -   Chunks may have odd lengths - in which case a padding byte
-        should be added so that subsequent chunks are word-aligned. I
-        haven’t seen any of these in the wild, and this current package
-        will throw an error if this is the case. Please let me know in
-        the github issues if this occurs.
-    -   Stereo samples may be possible in a soundfont, but I haven’t
-        seen any just yet.
--   No support for `*.sfArk` or `*.sfz` compressed files.
-    -   Is there an open source convertor/decompressor for these?
+- This package should load most SoundFont files with version v2.00 or
+  greater
+- This package currently uses the chunk naming conventions from the
+  specification. This is not always very easy to read/parse, and users
+  are directed to the specification for interpretation of the data
+  structure.
+- Unsupported for now as I couldn’t find any test files
+  - 24bit Samples (If you know of any 24bit Soundfont files, please let
+    me know in the github issues)
+  - Chunks may have odd lengths - in which case a padding byte should be
+    added so that subsequent chunks are word-aligned. I haven’t seen any
+    of these in the wild, and this current package will throw an error
+    if this is the case. Please let me know in the github issues if this
+    occurs.
+  - Stereo samples may be possible in a soundfont, but I haven’t seen
+    any just yet.
+- No support for `*.sfArk` or `*.sfz` compressed files.
+  - Is there an open source convertor/decompressor for these?
 
 \*\* Please let me know of any `*.sf2` files which this package cannot
 parse \*\*
@@ -117,8 +115,8 @@ remotes::install_github('coolbutuseless/rsoundfont')
 ## Example
 
 1.  Obtain a soundfont.
-    -   This example uses `weedgm4_update` SoundFont from
-        <https://www.philscomputerlab.com/general-midi-and-soundfonts.html>
+    - This example uses `weedgm4_update` SoundFont from
+      <https://www.philscomputerlab.com/general-midi-and-soundfonts.html>
 2.  Load the SoundFont data with `read_sf2()`
 3.  Examine the soundfont object
 4.  Create and play samples from the Soundfont
@@ -127,20 +125,26 @@ remotes::install_github('coolbutuseless/rsoundfont')
 library(rsoundfont)
 
 # Source: https://www.philscomputerlab.com/general-midi-and-soundfonts.html
-filename <- '/Users/mike/projectsdata/soundfonts/weedsgm4_update.sf2'
+filename <- './working/weedsgm4_update.sf2'
 
 sf <- read_sf2(filename)
 #> sdta offset: 368
 #> sdta end: 14908536
 
 # Names of all instruments
-head(names(sf$pdta$shdr), 20)
-#>  [1] "name"       "start"      "end"        "loop_start" "loop_end"  
-#>  [6] "rate"       "key"        "correction" "link"       "type"
+head(sf$pdta$shdr$name, 20)
+#>  [1] "Leslig5(L)"       "Leslig5(R)"       "Leslid5(L)"       "Leslid5(R)"      
+#>  [5] "Leslie4(L)"       "Leslie4(R)"       "Leslifs3(L)"      "Leslifs3(R)"     
+#>  [9] "Lesligs2(L)"      "Lesligs2(R)"      "Leslias1(L)"      "Leslias1(R)"     
+#> [13] "Leslic1(L)"       "Leslic1(R)"       "Mandolin Trem E5" "Mandolin Trem C5"
+#> [17] "Mandolin Trem A4" "Mandolin Trem G4" "Mandolin Trem E4" "Mandolin Trem C4"
 
 # Some Sample/looping information about an instrument
-sf$pdta$shdr[['Mandolin Trem E5']]
-#> NULL
+sf$pdta$shdr |> subset(name == 'Mandolin Trem E5')
+#>                name   start     end loop_start loop_end  rate key correction
+#> 15 Mandolin Trem E5 1246934 1289001    1266182  1288993 44100  60          0
+#>    link type
+#> 15    0    1
 ```
 
 ``` r
@@ -169,6 +173,6 @@ Wave file </a>
 
 ## Acknowledgements
 
--   R Core for developing and maintaining the language.
--   CRAN maintainers, for patiently shepherding packages onto CRAN and
-    maintaining the repository
+- R Core for developing and maintaining the language.
+- CRAN maintainers, for patiently shepherding packages onto CRAN and
+  maintaining the repository
